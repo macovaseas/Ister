@@ -39,3 +39,12 @@ To run the experiment in paper, run:
 bash scripts/long_term_forecast/ETT_script/Ister_ETTh1.sh
 bash scripts/long_term_forecast/ECL_script/Ister.sh
 ```
+
+## Citation
+Please cite our paper if you use this code in your work:
+@article{ISTER2024,
+  title={ISTER: Inverted Seasonal-Trend Decomposition Transformer},
+  author={Authors},
+  journal={},
+  year={2024}
+}

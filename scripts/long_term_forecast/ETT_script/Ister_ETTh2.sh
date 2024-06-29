@@ -1,6 +1,6 @@
-export CUDA_VISIBLE_DEVICES=0
+export CUDA_VISIBLE_DEVICES=3
 
-model_name=Ister
+model_name=Swin
 
 python -u run.py \
   --task_name long_term_forecast \
@@ -21,10 +21,12 @@ python -u run.py \
   --dec_in 7 \
   --c_out 7 \
   --des 'Exp' \
-  --d_model 128 \
-  --d_ff 128 \
   --itr 1 \
-  --batch_size 16
+  --batch_size 512 \
+  --learning_rate 0.0003 \
+  --lradj cosine \
+  --train_epochs 20 \
+  --d_model 128 \
 
 python -u run.py \
   --task_name long_term_forecast \
@@ -45,10 +47,12 @@ python -u run.py \
   --dec_in 7 \
   --c_out 7 \
   --des 'Exp' \
-  --d_model 128 \
-  --d_ff 128 \
   --itr 1 \
-  --batch_size 16
+  --batch_size 512 \
+  --learning_rate 0.0003 \
+  --lradj cosine \
+  --train_epochs 20 \
+  --d_model 128 \
 
 python -u run.py \
   --task_name long_term_forecast \
@@ -69,10 +73,12 @@ python -u run.py \
   --dec_in 7 \
   --c_out 7 \
   --des 'Exp' \
-  --d_model 128 \
-  --d_ff 128 \
   --itr 1 \
-  --batch_size 16
+  --batch_size 512 \
+  --learning_rate 0.0003 \
+  --lradj cosine \
+  --train_epochs 20 \
+  --d_model 128 \
 
 python -u run.py \
   --task_name long_term_forecast \
@@ -93,7 +99,9 @@ python -u run.py \
   --dec_in 7 \
   --c_out 7 \
   --des 'Exp' \
-  --d_model 128 \
-  --d_ff 128 \
   --itr 1 \
-  --batch_size 16
+  --batch_size 512 \
+  --learning_rate 0.0003 \
+  --lradj cosine \
+  --train_epochs 20 \
+  --d_model 128 \

@@ -1,6 +1,6 @@
-export CUDA_VISIBLE_DEVICES=1
+export CUDA_VISIBLE_DEVICES=4
 
-model_name=Ister
+model_name=Swin
 
 python -u run.py \
   --task_name long_term_forecast \
@@ -23,8 +23,8 @@ python -u run.py \
   --des 'Exp' \
   --d_model 512 \
   --d_ff 512 \
-  --batch_size 16 \
-  --learning_rate 0.0005 \
+  --batch_size 32 \
+  --learning_rate 0.001 \
   --itr 1
 
 python -u run.py \
@@ -49,7 +49,7 @@ python -u run.py \
   --d_model 512 \
   --d_ff 512 \
   --batch_size 16 \
-  --learning_rate 0.0005 \
+  --learning_rate 0.0003 \
   --itr 1
 
 
@@ -74,8 +74,8 @@ python -u run.py \
   --des 'Exp' \
   --d_model 512 \
   --d_ff 512 \
-  --batch_size 16 \
-  --learning_rate 0.0005 \
+  --batch_size 64 \
+  --learning_rate 0.001 \
   --itr 1
 
 
@@ -101,5 +101,5 @@ python -u run.py \
   --d_model 512 \
   --d_ff 512 \
   --batch_size 16 \
-  --learning_rate 0.0005 \
+  --learning_rate 0.0003 \
   --itr 1

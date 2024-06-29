@@ -1,6 +1,6 @@
-export CUDA_VISIBLE_DEVICES=0
+export CUDA_VISIBLE_DEVICES=2
 
-model_name=Ister
+model_name=Swin
 
 python -u run.py \
   --task_name long_term_forecast \
@@ -21,10 +21,12 @@ python -u run.py \
   --dec_in 7 \
   --c_out 7 \
   --des 'Exp' \
-  --d_model 128 \
-  --d_ff 128 \
   --itr 1 \
-  --batch_size 16
+  --batch_size 256 \
+  --learning_rate 0.0003 \
+  --lradj cosine \
+  --train_epochs 20 \
+  --d_model 128 \
 
 python -u run.py \
   --task_name long_term_forecast \
@@ -38,17 +40,19 @@ python -u run.py \
   --seq_len 96 \
   --label_len 48 \
   --pred_len 192 \
-  --e_layers 2 \
+  --e_layers 1 \
   --d_layers 1 \
   --factor 3 \
   --enc_in 7 \
   --dec_in 7 \
   --c_out 7 \
   --des 'Exp' \
-  --d_model 128 \
-  --d_ff 128 \
   --itr 1 \
-  --batch_size 16
+  --batch_size 512 \
+  --learning_rate 0.0003 \
+  --lradj cosine \
+  --train_epochs 20 \
+  --d_model 128 \
 
 python -u run.py \
   --task_name long_term_forecast \
@@ -69,10 +73,12 @@ python -u run.py \
   --dec_in 7 \
   --c_out 7 \
   --des 'Exp' \
-  --d_model 128 \
-  --d_ff 128 \
   --itr 1 \
-  --batch_size 16
+  --batch_size 256 \
+  --learning_rate 0.0003 \
+  --lradj cosine \
+  --train_epochs 20 \
+  --d_model 128 \
 
 python -u run.py \
   --task_name long_term_forecast \
@@ -86,14 +92,16 @@ python -u run.py \
   --seq_len 96 \
   --label_len 48 \
   --pred_len 720 \
-  --e_layers 2 \
+  --e_layers 1 \
   --d_layers 1 \
   --factor 3 \
   --enc_in 7 \
   --dec_in 7 \
   --c_out 7 \
   --des 'Exp' \
-  --d_model 128 \
-  --d_ff 128 \
   --itr 1 \
-  --batch_size 16
+  --batch_size 256 \
+  --learning_rate 0.0003 \
+  --lradj cosine \
+  --train_epochs 20 \
+  --d_model 128 \

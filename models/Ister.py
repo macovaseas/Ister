@@ -28,6 +28,34 @@ class MLP(nn.Module):
         return out
 
 
+class DotAttention(nn.Module):
+    def __init__(self, attention_dropout=0.1):
+        super(DotAttention, self).__init__()
+        self.gelu = nn.GELU()
+        self.dropout = nn.Dropout(attention_dropout)
+
+    def forward(self, queries, keys, values, attn_mask=None, tau=None, delta=None):
+        B, L, _, E = queries.shape
+        _, S, _, _ = values.shape
+
+        # Reshape
+        queries = torch.reshape(queries, (B, L, -1))
+        keys = torch.reshape(keys, (B, S, -1))
+        values = torch.reshape(values, (B, S, -1))
+
+        # Only for self-attention, cross-attention version uses forecasting to alignment token_num.
+        assert L == S
+
+        # Compute score
+        queries = torch.softmax(queries, dim=1)
+        scores = torch.sum(self.gelu(queries * keys), dim=1, keepdim=True).repeat(1, L, 1)
+
+        # Output
+        V = self.dropout(values * scores)
+
+        return V.contiguous(), None
+
+
 class Backbone(nn.Module):
     def __init__(self, configs):
         super(Backbone, self).__init__()
@@ -35,8 +63,7 @@ class Backbone(nn.Module):
             [
                 EncoderLayer(
                     AttentionLayer(
-                        FullAttention(False, configs.factor, attention_dropout=configs.dropout,
-                                      output_attention=True), configs.d_model, configs.n_heads),
+                        DotAttention(attention_dropout=configs.dropout), configs.d_model, configs.n_heads),
                     configs.d_model,
                     configs.d_ff,
                     dropout=configs.dropout,

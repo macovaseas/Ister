@@ -43,7 +43,7 @@ class DotAttention(nn.Module):
         keys = torch.reshape(keys, (B, S, -1))
         values = torch.reshape(values, (B, S, -1))
 
-        # Only for self-attention, cross-attention version uses forecasting to alignment token_num.
+        # Only for self-attention, cross-attention version uses forecasting to align token_num.
         assert L == S
 
         # Compute score

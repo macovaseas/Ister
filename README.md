@@ -7,7 +7,7 @@ This repository contains the official implementation of the paper "ISTER: Invert
 
 Time series forecasting is crucial in various applications, including energy consumption, transportation, economic planning, weather prediction, and disease propagation. The Inverted Seasonal-Trend Decomposition Transformer (ISTER) is introduced to enhance long-term multivariate time series forecasting by decomposing time series into seasonal and trend components and employing a channel-independent network architecture.
 
-![Alt text](pics/model.epss)
+![Alt text](pics/model.jpg)
 
 ## Features
 

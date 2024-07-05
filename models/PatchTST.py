@@ -3,8 +3,6 @@ from torch import nn
 from layers.Transformer_EncDec import Encoder, EncoderLayer
 from layers.SelfAttention_Family import FullAttention, AttentionLayer
 from layers.Embed import PatchEmbedding
-import matplotlib.pyplot as plt
-import seaborn as sns
 
 
 class FlattenHead(nn.Module):

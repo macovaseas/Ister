@@ -2,7 +2,7 @@
 import torch
 import torch.nn as nn
 from layers.Transformer_EncDec import Encoder, EncoderLayer
-from layers.SelfAttention_Family import FullAttention, AttentionLayer
+from layers.SelfAttention_Family import AttentionLayer
 from layers.Embed import DataEmbedding_inverted
 from layers.Autoformer_EncDec import series_decomp
 
@@ -16,7 +16,7 @@ class MLP(nn.Module):
         self.fc3 = nn.Linear(input_dim, output_dim, bias=bias)
         self.dropout = nn.Dropout(dropout)
         self.act = nn.GELU()
-        self.ln = nn.LayerNorm(output_dim, bias=bias)
+        self.ln = nn.LayerNorm(output_dim)
 
     def forward(self, x):
         out = self.fc1(x)
@@ -63,7 +63,8 @@ class Backbone(nn.Module):
             [
                 EncoderLayer(
                     AttentionLayer(
-                        DotAttention(attention_dropout=configs.dropout), configs.d_model, configs.n_heads),
+                        # Dot-attention
+                        DotAttention(attention_dropout=configs.dropout), configs.d_model, 1), # No muti-head
                     configs.d_model,
                     configs.d_ff,
                     dropout=configs.dropout,
@@ -93,7 +94,7 @@ class Model(nn.Module):
         self.pred_len = configs.pred_len
         self.output_attention = configs.output_attention
         # Embedding
-        self.season_embedding = DataEmbedding_inverted(configs.seq_len, configs.d_model, configs.embed, configs.freq,
+        self.seasonal_embedding = DataEmbedding_inverted(configs.seq_len, configs.d_model, configs.embed, configs.freq,
                                                        configs.dropout)
         self.trend_embedding = DataEmbedding_inverted(configs.seq_len, configs.d_model, configs.embed, configs.freq,
                                                       configs.dropout)
@@ -123,7 +124,7 @@ class Model(nn.Module):
         # Decomposition
         seasonal_init, trend_init = self.decomp(x_enc)
         # Embedding
-        season_out = self.season_embedding(seasonal_init, x_mark_enc)
+        season_out = self.seasonal_embedding(seasonal_init, x_mark_enc)
         trend_out = self.trend_embedding(trend_init, x_mark_enc)
         # Encoder
         season_out, trend_out = self.backbone(season_out, trend_out)

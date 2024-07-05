@@ -1,6 +1,6 @@
 export CUDA_VISIBLE_DEVICES=3
 
-model_name=Swin
+model_name=Ister
 
 python -u run.py \
   --task_name long_term_forecast \

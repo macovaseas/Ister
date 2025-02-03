@@ -1,0 +1,226 @@
+import torch
+import torch.nn as nn
+import math
+import numpy as np
+
+class PositionalEmbedding(nn.Module):
+    def __init__(self, d_model, max_len=5000):
+        super(PositionalEmbedding, self).__init__()
+        # Compute the positional encodings once in log space.
+
+        if d_model % 2 != 0:
+            d_model = d_model + 1
+
+        pe = torch.zeros(max_len, d_model).float()
+        pe.require_grad = False
+
+        position = torch.arange(0, max_len).float().unsqueeze(1)
+        div_term = (torch.arange(0, d_model, 2).float()
+                    * -(math.log(10000.0) / d_model)).exp()
+
+        pe[:, 0::2] = torch.sin(position * div_term)
+        pe[:, 1::2] = torch.cos(position * div_term)
+
+        pe = pe.unsqueeze(0)
+        self.register_buffer('pe', pe)
+
+    def forward(self, x):
+        return self.pe[:, :x.size(1)]
+
+
+class TokenEmbedding(nn.Module):
+    def __init__(self, c_in, d_model):
+        super(TokenEmbedding, self).__init__()
+        padding = 1 if torch.__version__ >= '1.5.0' else 2
+        self.tokenConv = nn.Conv1d(in_channels=c_in, out_channels=d_model,
+                                   kernel_size=3, padding=padding, padding_mode='circular', bias=False)
+        for m in self.modules():
+            if isinstance(m, nn.Conv1d):
+                nn.init.kaiming_normal_(
+                    m.weight, mode='fan_in', nonlinearity='leaky_relu')
+
+    def forward(self, x):
+        x = self.tokenConv(x.permute(0, 2, 1)).transpose(1, 2)
+        return x
+
+
+class FixedEmbedding(nn.Module):
+    def __init__(self, c_in, d_model):
+        super(FixedEmbedding, self).__init__()
+
+        w = torch.zeros(c_in, d_model).float()
+        w.require_grad = False
+
+        position = torch.arange(0, c_in).float().unsqueeze(1)
+        div_term = (torch.arange(0, d_model, 2).float()
+                    * -(math.log(10000.0) / d_model)).exp()
+
+        w[:, 0::2] = torch.sin(position * div_term)
+        w[:, 1::2] = torch.cos(position * div_term)
+
+        self.emb = nn.Embedding(c_in, d_model)
+        self.emb.weight = nn.Parameter(w, requires_grad=False)
+
+    def forward(self, x):
+        return self.emb(x).detach()
+
+
+class Temporal_Embedding(nn.Module):
+    def __init__(self, d_model, embed_type='fixed', freq='h'):
+        super(Temporal_Embedding, self).__init__()
+
+        minute_size = 4
+        hour_size = 24
+        weekday_size = 7
+        day_size = 32
+        month_size = 13
+
+        Embed = FixedEmbedding if embed_type == 'fixed' else nn.Embedding
+        if freq == 't':
+            self.minute_embed = Embed(minute_size, d_model)
+        self.hour_embed = Embed(hour_size, d_model)
+        self.weekday_embed = Embed(weekday_size, d_model)
+        self.day_embed = Embed(day_size, d_model)
+        self.month_embed = Embed(month_size, d_model)
+
+    def forward(self, x):
+        x = x.long()
+        minute_x = self.minute_embed(x[:, :, 4]) if hasattr(
+            self, 'minute_embed') else 0.
+        hour_x = self.hour_embed(x[:, :, 3])
+        weekday_x = self.weekday_embed(x[:, :, 2])
+        day_x = self.day_embed(x[:, :, 1])
+        month_x = self.month_embed(x[:, :, 0])
+
+        return hour_x + weekday_x + day_x + month_x + minute_x
+
+
+class TimeFeatureEmbedding(nn.Module):
+    def __init__(self, d_model, embed_type='timeF', freq='h'):
+        super(TimeFeatureEmbedding, self).__init__()
+
+        freq_map = {'h': 4, 't': 5, 's': 6,
+                    'm': 1, 'a': 1, 'w': 2, 'd': 3, 'b': 3}
+        d_inp = freq_map[freq]
+        self.embed = nn.Linear(d_inp, d_model, bias=False)
+
+    def forward(self, x):
+        return self.embed(x)
+
+class PositionEmbedding(nn.Module):
+    def __init__(self, configs):
+        super(PositionEmbedding, self).__init__()
+        self.position_embedding = PositionalEmbedding(d_model=configs.chan_in)
+        self.dropout = nn.Dropout(p=configs.dropout)
+
+    def forward(self, x):
+
+        even_channels = True
+        # For solving the problem of position embedding of odd channels
+        if x.shape[-1] % 2 != 0:
+            zero_channel = torch.zeros(x.shape[0], x.shape[1], x.shape[2], 1).to(x.device)
+            x = torch.cat([x, zero_channel], dim=-1)
+            even_channels = False
+
+        num_seg = x.shape[1]
+        x = torch.reshape(x, (x.shape[0] * x.shape[1], x.shape[2], x.shape[3]))
+
+        x = x + self.position_embedding(x)
+
+        x = torch.reshape(x, (-1, num_seg, x.shape[1], x.shape[2]))
+
+        if not even_channels:
+            x = x[..., :-1]
+
+        return self.dropout(x)
+
+class TemporalEmbedding(nn.Module):
+    def __init__(self, configs):
+        super(TemporalEmbedding, self).__init__()
+
+        self.temporal_embedding = Temporal_Embedding(d_model=configs.chan_in, embed_type=configs.embed, freq=configs.freq) if configs.embed != 'timeF' else TimeFeatureEmbedding(
+            d_model=configs.chan_in, embed_type=configs.embed, freq=configs.freq)
+
+    def forward(self, x, x_mark):
+        x = x + self.temporal_embedding(x_mark)
+
+        return x
+    
+
+def FFT_for_Period(x, k=2):
+    # [B, T, C]
+    xf = torch.fft.rfft(x, dim=1)
+    # find period by amplitudes
+    frequency_list = abs(xf).mean(0).mean(-1)
+    frequency_list[0] = 0
+    _, top_list = torch.topk(frequency_list, k)
+
+    top_list = torch.sort(top_list, descending=False).values
+
+    # Make sure the first level is the original time series itself
+    if top_list[0] != 1:
+        top_list = torch.cat(
+            [torch.tensor([1]).to(top_list.device), top_list[:-1]])
+
+    top_list = top_list.detach().cpu().numpy()
+    top_list = top_list[top_list != 0]
+    top_list = np.unique(top_list)
+    if len(top_list) == 1:
+        top_list = np.append(top_list, top_list[0] * 2)
+    period = x.shape[1] // top_list
+
+    unique_period, unique_index = np.unique(period, return_index=True)
+    unique_period = np.sort(unique_period)[::-1]
+
+    return unique_period
+
+
+class Multiscale_InvertedEmbedding(nn.Module):
+    def __init__(self, configs):
+        super(Multiscale_InvertedEmbedding, self).__init__()
+        self.k = configs.top_k
+        self.projection = nn.Linear(configs.seq_len, configs.d_model)
+
+    def forward(self, x):
+        B, L, C = x.size()
+        period_list = FFT_for_Period(x, self.k)
+
+        levels = []
+        components_per_level = []
+        for i in range(len(period_list)):
+            period = period_list[i]
+
+            if L % period != 0:
+                remainder = L % period
+                length = L - remainder
+                x = x[:, :-remainder, :]
+            else:
+                length = L
+
+            # split into components
+            components_num = int(length / period)
+            components_per_level.append(components_num)
+            components_size = int(length // components_num)
+            components = [x[:, i * components_size:(i + 1) * components_size, :] for i in range(components_num)]
+
+            components_uniform_size = []
+            for component in components:
+                component = component.permute(0, 2, 1)
+                component_length = component.shape[-1]
+                original_length = L
+
+                # padding to original length
+                if component_length < original_length:
+                    padding_size = original_length - component_length
+                    padding = torch.zeros((component.shape[:-1] + (padding_size,)), device=component.device)
+                    component = torch.cat((component, padding), dim=-1)
+
+                component = self.projection(component)
+                component = component.permute(0, 2, 1)
+                components_uniform_size.append(component)
+
+            levels = levels + components_uniform_size
+
+        H = torch.stack(levels, dim=-1)
+        H = H.permute(0, 3, 1, 2)
+        return H, components_per_level

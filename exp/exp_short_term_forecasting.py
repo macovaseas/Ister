@@ -1,3 +1,5 @@
+import shutil
+
 from data_provider.data_factory import data_provider
 from data_provider.m4 import M4Meta
 from exp.exp_basic import Exp_Basic
@@ -12,6 +14,8 @@ import time
 import warnings
 import numpy as np
 import pandas
+
+import re
 
 warnings.filterwarnings('ignore')
 
@@ -88,10 +92,11 @@ class Exp_Short_Term_Forecast(Exp_Basic):
                 outputs = self.model(batch_x, None, dec_inp, None)
 
                 f_dim = -1 if self.args.features == 'MS' else 0
-                outputs = outputs[:, -self.args.pred_len:, f_dim:]
-                batch_y = batch_y[:, -self.args.pred_len:, f_dim:].to(self.device)
 
-                batch_y_mark = batch_y_mark[:, -self.args.pred_len:, f_dim:].to(self.device)
+                outputs = outputs[:, -self.args.label_len - self.args.pred_len:, f_dim:]
+                batch_y = batch_y[:, -self.args.label_len - self.args.pred_len:, f_dim:].to(self.device)
+                batch_y_mark = batch_y_mark[:, -self.args.label_len - self.args.pred_len:, f_dim:].to(self.device)
+
                 loss_value = criterion(batch_x, self.args.frequency_map, outputs, batch_y, batch_y_mark)
                 loss_sharpness = mse((outputs[:, 1:, :] - outputs[:, :-1, :]), (batch_y[:, 1:, :] - batch_y[:, :-1, :]))
                 loss = loss_value  # + loss_sharpness * 1e-5
@@ -143,13 +148,19 @@ class Exp_Short_Term_Forecast(Exp_Basic):
             id_list = np.arange(0, B, 500)  # validation set size
             id_list = np.append(id_list, B)
             for i in range(len(id_list) - 1):
-                outputs[id_list[i]:id_list[i + 1], :, :] = self.model(x[id_list[i]:id_list[i + 1]], None,
+                outputs_pred = self.model(x[id_list[i]:id_list[i + 1]], None,
                                                                       dec_inp[id_list[i]:id_list[i + 1]],
-                                                                      None).detach().cpu()
+                                                                      None)
+                outputs[id_list[i]:id_list[i + 1], :, :] = outputs_pred[:, -self.args.pred_len:, :]
+            outputs = outputs.detach().cpu()
             f_dim = -1 if self.args.features == 'MS' else 0
             outputs = outputs[:, -self.args.pred_len:, f_dim:]
             pred = outputs
-            true = torch.from_numpy(np.array(y))
+            y = np.array(y)
+            if y.dtype == np.object_:
+                y = np.array([np.array(v).astype(float) for v in y])
+
+            true = torch.from_numpy(y)
             batch_y_mark = torch.ones(true.shape)
 
             loss = criterion(x.detach().cpu()[:, :, 0], self.args.frequency_map, pred[:, :, 0], true, batch_y_mark)
@@ -169,9 +180,11 @@ class Exp_Short_Term_Forecast(Exp_Basic):
             print('loading model')
             self.model.load_state_dict(torch.load(os.path.join('./checkpoints/' + setting, 'checkpoint.pth')))
 
-        folder_path = './test_results/' + setting + '/'
-        if not os.path.exists(folder_path):
-            os.makedirs(folder_path)
+        shutil.rmtree(os.path.join('./checkpoints/', setting))
+
+        # folder_path = './test_results/' + setting + '/'
+        # if not os.path.exists(folder_path):
+        #     os.makedirs(folder_path)
 
         self.model.eval()
         with torch.no_grad():
@@ -183,8 +196,10 @@ class Exp_Short_Term_Forecast(Exp_Basic):
             id_list = np.arange(0, B, 1)
             id_list = np.append(id_list, B)
             for i in range(len(id_list) - 1):
-                outputs[id_list[i]:id_list[i + 1], :, :] = self.model(x[id_list[i]:id_list[i + 1]], None,
-                                                                      dec_inp[id_list[i]:id_list[i + 1]], None)
+                outputs_pred = self.model(x[id_list[i]:id_list[i + 1]], None,
+                                          dec_inp[id_list[i]:id_list[i + 1]],
+                                          None)
+                outputs[id_list[i]:id_list[i + 1], :, :] = outputs_pred[:, -self.args.pred_len:, :]
 
                 if id_list[i] % 1000 == 0:
                     print(id_list[i])
@@ -197,15 +212,16 @@ class Exp_Short_Term_Forecast(Exp_Basic):
             trues = y
             x = x.detach().cpu().numpy()
 
-            for i in range(0, preds.shape[0], preds.shape[0] // 10):
-                gt = np.concatenate((x[i, :, 0], trues[i]), axis=0)
-                pd = np.concatenate((x[i, :, 0], preds[i, :, 0]), axis=0)
-                visual(gt, pd, os.path.join(folder_path, str(i) + '.pdf'))
+            # for i in range(0, preds.shape[0], preds.shape[0] // 10):
+            #     gt = np.concatenate((x[i, :, 0], trues[i]), axis=0)
+            #     pd = np.concatenate((x[i, :, 0], preds[i, :, 0]), axis=0)
+            #     # visual(gt, pd, os.path.join(folder_path, str(i) + '.pdf'))
 
         print('test shape:', preds.shape)
 
         # result save
-        folder_path = './m4_results/' + self.args.model + '/'
+        # folder_path = './m4_results/' + self.args.model + '/'
+        folder_path = './results/' + 'Short_fore' + '/'
         if not os.path.exists(folder_path):
             os.makedirs(folder_path)
 
@@ -216,7 +232,8 @@ class Exp_Short_Term_Forecast(Exp_Basic):
         forecasts_df.to_csv(folder_path + self.args.seasonal_patterns + '_forecast.csv')
 
         print(self.args.model)
-        file_path = './m4_results/' + self.args.model + '/'
+        # file_path = './m4_results/' + self.args.model + '/'
+        file_path = folder_path
         if 'Weekly_forecast.csv' in os.listdir(file_path) \
                 and 'Monthly_forecast.csv' in os.listdir(file_path) \
                 and 'Yearly_forecast.csv' in os.listdir(file_path) \
@@ -230,6 +247,16 @@ class Exp_Short_Term_Forecast(Exp_Basic):
             print('mape:', mape)
             print('mase:', mase)
             print('owa:', owa_results)
+
+            f = open(os.path.join(folder_path, "result_short_forecasting.txt"), 'a+')
+            f.write(setting + "  \n")
+            f.write('smape:{} \nmape:{} \nmase:{} \nowa:{} \n'.format(smape_results, mape, mase, owa_results))
+
+            f.write('\n')
+            f.close()
+
+            return [smape_results, mape, mase, owa_results]
+
         else:
             print('After all 6 tasks are finished, you can calculate the averaged index')
-        return
+        return [0, 0, 0, 0]

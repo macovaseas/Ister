@@ -1,12 +1,12 @@
 import os
-
+import math
 import numpy as np
 import torch
 import matplotlib.pyplot as plt
 import pandas as pd
-import math
-
-plt.switch_backend('agg')
+import torch.nn as nn
+import torch.nn.functional as F
+plt.switch_backend('Agg')  # TkAgg
 
 
 def adjust_learning_rate(optimizer, epoch, args):
@@ -26,7 +26,6 @@ def adjust_learning_rate(optimizer, epoch, args):
             param_group['lr'] = lr
         print('Updating learning rate to {}'.format(lr))
 
-
 class EarlyStopping:
     def __init__(self, patience=7, verbose=False, delta=0):
         self.patience = patience
@@ -34,7 +33,7 @@ class EarlyStopping:
         self.counter = 0
         self.best_score = None
         self.early_stop = False
-        self.val_loss_min = np.Inf
+        self.val_loss_min = np.inf
         self.delta = delta
 
     def __call__(self, val_loss, model, path):
@@ -77,17 +76,27 @@ class StandardScaler():
     def inverse_transform(self, data):
         return (data * self.std) + self.mean
 
-
-def visual(true, preds=None, name='./pic/test.pdf'):
+def visual(task_name, pd_start, pd_end, true, preds=None, name='./pic/test.pdf'):
     """
     Results visualization
     """
-    plt.figure()
-    plt.plot(true, label='GroundTruth', linewidth=2)
-    if preds is not None:
-        plt.plot(preds, label='Prediction', linewidth=2)
-    plt.legend()
-    plt.savefig(name, bbox_inches='tight')
+    if task_name == 'long_term_forecast':
+        plt.figure()
+        plt.plot(true, label='GroundTruth', linewidth=2)
+        if preds is not None:
+            x_values = range(pd_start, pd_end)
+            plt.plot(x_values, preds, label='Prediction', linewidth=2)
+        plt.legend()
+        # plt.show()
+        plt.savefig(name, bbox_inches='tight')
+
+    elif task_name == 'imputation':
+        plt.figure()
+        plt.plot(preds, label='Prediction', color='C1', linewidth=2)
+        plt.plot(true, label='GroundTruth', color='C0', linewidth=2)
+        plt.legend()
+        # plt.show()
+        plt.savefig(name, bbox_inches='tight')
 
 
 def adjustment(gt, pred):
@@ -116,3 +125,37 @@ def adjustment(gt, pred):
 
 def cal_accuracy(y_pred, y_true):
     return np.mean(y_pred == y_true)
+
+class series_decomp(nn.Module):
+    """
+    Series decomposition block
+    """
+
+    def __init__(self, kernel_size):
+        super(series_decomp, self).__init__()
+        self.moving_avg = moving_avg(kernel_size, stride=1)
+
+    def forward(self, x):
+        moving_mean = self.moving_avg(x)
+        res = x - moving_mean
+        return res, moving_mean
+
+
+class moving_avg(nn.Module):
+    """
+    Moving average block to highlight the trend of time series
+    """
+
+    def __init__(self, kernel_size, stride):
+        super(moving_avg, self).__init__()
+        self.kernel_size = kernel_size
+        self.avg = nn.AvgPool1d(kernel_size=kernel_size, stride=stride, padding=0)
+
+    def forward(self, x):
+        # padding on the both ends of time series
+        front = x[:, 0:1, :].repeat(1, (self.kernel_size - 1) // 2, 1)
+        end = x[:, -1:, :].repeat(1, (self.kernel_size - 1) // 2, 1)
+        x = torch.cat([front, x, end], dim=1)
+        x = self.avg(x.permute(0, 2, 1))
+        x = x.permute(0, 2, 1)
+        return x

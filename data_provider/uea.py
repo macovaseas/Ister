@@ -10,7 +10,7 @@ def collate_fn(data, max_len=None):
         data: len(batch_size) list of tuples (X, y).
             - X: torch tensor of shape (seq_length, feat_dim); variable seq_length.
             - y: torch tensor of shape (num_labels,) : class indices or numerical targets
-                (for classification or regression, respectively). num_labels > 1 for multi-task models
+                (for classification or regression, respectively). num_labels > 1 for multi-task model
         max_len: global fixed sequence length. Used for architectures requiring fixed length input,
             where the batch length cannot vary dynamically. Longer sequences are clipped, shorter are padded with 0s
     Returns:

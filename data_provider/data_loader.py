@@ -237,7 +237,7 @@ class Dataset_Custom(Dataset):
         num_train = int(len(df_raw) * 0.7)
         num_test = int(len(df_raw) * 0.2)
         num_vali = len(df_raw) - num_train - num_test
-        border1s = [0, num_train - self.seq_len, len(df_raw) - num_test - self.seq_len]
+        border1s = [0, num_train - self.seq_len, len(df_raw) - num_test - self.seq_len]  # 为什么这么划分，这样似乎会使训练验证测试有交集
         border2s = [num_train, num_train + num_vali, len(df_raw)]
         border1 = border1s[self.set_type]
         border2 = border2s[self.set_type]
@@ -324,7 +324,7 @@ class Dataset_M4(Dataset):
             dataset = M4Dataset.load(training=False, dataset_file=self.root_path)
         training_values = np.array(
             [v[~np.isnan(v)] for v in
-             dataset.values[dataset.groups == self.seasonal_patterns]])  # split different frequencies
+             dataset.values[dataset.groups == self.seasonal_patterns]], dtype=object)  # split different frequencies    加了  , dtype=object   否则
         self.ids = np.array([i for i in dataset.ids[dataset.groups == self.seasonal_patterns]])
         self.timeseries = [ts for ts in training_values]
 

@@ -79,7 +79,7 @@ class M4Dataset:
     values: np.ndarray
 
     @staticmethod
-    def load(training: bool = True, dataset_file: str = '../dataset/m4') -> 'M4Dataset':
+    def load(training: bool = True, dataset_file: str = 'dataset/m4') -> 'M4Dataset':
         """
         Load cached dataset.
 
@@ -127,12 +127,3 @@ class M4Meta:
         'Daily': 10,
         'Hourly': 10
     }  # from interpretable.gin
-
-
-def load_m4_info() -> pd.DataFrame:
-    """
-    Load M4Info file.
-
-    :return: Pandas DataFrame of M4Info.
-    """
-    return pd.read_csv(INFO_FILE_PATH)

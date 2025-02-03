@@ -1,3 +1,4 @@
+import shutil
 from data_provider.data_factory import data_provider
 from exp.exp_basic import Exp_Basic
 from utils.tools import EarlyStopping, adjust_learning_rate, cal_accuracy
@@ -8,7 +9,8 @@ import os
 import time
 import warnings
 import numpy as np
-import pdb
+import re
+from thop import profile, clever_format
 
 warnings.filterwarnings('ignore')
 
@@ -23,7 +25,7 @@ class Exp_Classification(Exp_Basic):
         test_data, test_loader = self._get_data(flag='TEST')
         self.args.seq_len = max(train_data.max_seq_len, test_data.max_seq_len)
         self.args.pred_len = 0
-        self.args.enc_in = train_data.feature_df.shape[1]
+        self.args.chan_in = train_data.feature_df.shape[1]
         self.args.num_class = len(train_data.class_names)
         # model init
         model = self.model_dict[self.args.model].Model(self.args).float()
@@ -57,7 +59,7 @@ class Exp_Classification(Exp_Basic):
                 outputs = self.model(batch_x, padding_mask, None, None)
 
                 pred = outputs.detach().cpu()
-                loss = criterion(pred, label.long().squeeze().cpu())
+                loss = criterion(pred, label.long().squeeze(-1).cpu())
                 total_loss.append(loss)
 
                 preds.append(outputs.detach())
@@ -105,7 +107,23 @@ class Exp_Classification(Exp_Basic):
 
                 batch_x = batch_x.float().to(self.device)
                 padding_mask = padding_mask.float().to(self.device)
+
                 label = label.to(self.device)
+
+                #  paramters and FLOPs
+                if epoch == i == 0:
+                    print('########################  Paramters and FLOPs  ######################### ')
+                    total_params = sum(p.numel() for p in self.model.parameters())
+                    total_params += sum(p.numel() for p in self.model.buffers())
+                    print(f'{total_params:,} total parameters.')
+                    print(f'{total_params / (1024 * 1024):.2f}M total parameters.')
+                    total_trainable_params = sum(p.numel() for p in self.model.parameters() if p.requires_grad)
+                    print(f'{total_trainable_params:,} training parameters.')
+                    print(f'{total_trainable_params / (1024 * 1024):.2f}M training parameters.')
+                    flops, _ = profile(self.model, inputs=(batch_x, padding_mask, None, None))
+                    macs = clever_format(flops, "%.3f")
+                    print(f'{macs:}  FLOPs.')
+                    print('####################################################################### ')
 
                 outputs = self.model(batch_x, padding_mask, None, None)
                 loss = criterion(outputs, label.long().squeeze(-1))
@@ -148,17 +166,16 @@ class Exp_Classification(Exp_Basic):
         if test:
             print('loading model')
             self.model.load_state_dict(torch.load(os.path.join('./checkpoints/' + setting, 'checkpoint.pth')))
+        shutil.rmtree(os.path.join('./checkpoints/', setting))
 
         preds = []
         trues = []
-        folder_path = './test_results/' + setting + '/'
-        if not os.path.exists(folder_path):
-            os.makedirs(folder_path)
 
         self.model.eval()
         with torch.no_grad():
             for i, (batch_x, label, padding_mask) in enumerate(test_loader):
                 batch_x = batch_x.float().to(self.device)
+                # batch_x = batch_x.to(torch.float64).to(self.device)
                 padding_mask = padding_mask.float().to(self.device)
                 label = label.to(self.device)
 
@@ -177,16 +194,25 @@ class Exp_Classification(Exp_Basic):
         accuracy = cal_accuracy(predictions, trues)
 
         # result save
-        folder_path = './results/' + setting + '/'
+        folder_path = './results/' + '/' + self.args.task_name + '/' + self.args.model_id + '/'
         if not os.path.exists(folder_path):
             os.makedirs(folder_path)
 
         print('accuracy:{}'.format(accuracy))
-        file_name='result_classification.txt'
-        f = open(os.path.join(folder_path,file_name), 'a')
+        file_name=f'result_classification.txt'
+        f = open(os.path.join(folder_path,file_name), 'a+')
         f.write(setting + "  \n")
         f.write('accuracy:{}'.format(accuracy))
         f.write('\n')
+
+        f.seek(0)
+        lines = f.readlines()
+        accuracies = [float(re.search(r'accuracy:(\d+\.\d+)', line).group(1)) for line in lines if 'accuracy:' in line]
+        average_accuracy = sum(accuracies) / len(accuracies)
+        f.write(f'Average Accuracy: {average_accuracy}')
+
+        f.write('\n')
         f.write('\n')
         f.close()
-        return
+
+        return average_accuracy

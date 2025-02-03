@@ -1,10 +1,11 @@
+import re
+import shutil
 from data_provider.data_factory import data_provider
 from exp.exp_basic import Exp_Basic
 from utils.tools import EarlyStopping, adjust_learning_rate, adjustment
 from sklearn.metrics import precision_recall_fscore_support
 from sklearn.metrics import accuracy_score
 import torch.multiprocessing
-
 torch.multiprocessing.set_sharing_strategy('file_system')
 import torch
 import torch.nn as nn
@@ -132,10 +133,9 @@ class Exp_Anomaly_Detection(Exp_Basic):
             print('loading model')
             self.model.load_state_dict(torch.load(os.path.join('./checkpoints/' + setting, 'checkpoint.pth')))
 
+        shutil.rmtree(os.path.join('./checkpoints/', setting))
+
         attens_energy = []
-        folder_path = './test_results/' + setting + '/'
-        if not os.path.exists(folder_path):
-            os.makedirs(folder_path)
 
         self.model.eval()
         self.anomaly_criterion = nn.MSELoss(reduce=False)
@@ -196,12 +196,28 @@ class Exp_Anomaly_Detection(Exp_Basic):
             accuracy, precision,
             recall, f_score))
 
-        f = open("result_anomaly_detection.txt", 'a')
+        folder_path = './results/' + '/' + self.args.task_name + '/' + self.args.model_id + '/'
+        if not os.path.exists(folder_path):
+            os.makedirs(folder_path)
+
+        f = open(os.path.join(folder_path, "result_anomaly_detection.txt"), 'a+')
         f.write(setting + "  \n")
-        f.write("Accuracy : {:0.4f}, Precision : {:0.4f}, Recall : {:0.4f}, F-score : {:0.4f} ".format(
+        f.write("Accuracy:{:0.4f}\nPrecision:{:0.4f}\nRecall:{:0.4f}\nF-score:{:0.4f}\n".format(
             accuracy, precision,
             recall, f_score))
-        f.write('\n')
+
+        f.seek(0)
+        lines = f.readlines()
+        accuracy_s = [float(re.search(r'Accuracy:(\d+\.\d+)', line).group(1)) for line in lines if 'Accuracy:' in line]
+        precision_s = [float(re.search(r'Precision:(\d+\.\d+)', line).group(1)) for line in lines if 'Precision:' in line]
+        recall_s = [float(re.search(r'Recall:(\d+\.\d+)', line).group(1)) for line in lines if 'Recall:' in line]
+        f_s = [float(re.search(r'F-score:(\d+\.\d+)', line).group(1)) for line in lines if 'F-score:' in line]
+        average_acc = sum(accuracy_s) / len(accuracy_s)
+        average_pre = sum(precision_s) / len(precision_s)
+        accuracy_rec = sum(recall_s) / len(recall_s)
+        average_f = sum(f_s) / len(f_s)
+        f.write('Average Accuracy:{} , Average Precision:{} ,Average Recall:{} , Average F-score:{}\n'.format(average_acc, average_pre, accuracy_rec, average_f))
+
         f.write('\n')
         f.close()
-        return
+        return [average_acc, average_pre, accuracy_rec, average_f]

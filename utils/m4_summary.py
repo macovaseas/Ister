@@ -26,7 +26,8 @@ import os
 
 
 def group_values(values, groups, group_name):
-    return np.array([v[~np.isnan(v)] for v in values[groups == group_name]])
+    # return np.array([v[~np.isnan(v)] for v in values[groups == group_name]])  # 换成下面的
+    return [np.array([x for x in v if not isinstance(x, float) or not np.isnan(x)]) for v in values[groups == group_name]]
 
 
 def mase(forecast, insample, outsample, frequency):
@@ -64,7 +65,8 @@ class M4Summary:
         grouped_owa = OrderedDict()
 
         naive2_forecasts = pd.read_csv(self.naive_path).values[:, 1:].astype(np.float32)
-        naive2_forecasts = np.array([v[~np.isnan(v)] for v in naive2_forecasts])
+        # naive2_forecasts = np.array([v[~np.isnan(v)] for v in naive2_forecasts])  # 换成下面的
+        naive2_forecasts = np.array([np.array(v) for v in naive2_forecasts], dtype=object)
 
         model_mases = {}
         naive2_smapes = {}
@@ -90,6 +92,9 @@ class M4Summary:
                                                      insample=insample[i],
                                                      outsample=target[i],
                                                      frequency=frequency) for i in range(len(model_forecast))])
+
+            naive2_forecast = np.array(naive2_forecast)  # 后加的两句，不然报错
+            target = np.array(target)
 
             naive2_smapes[group_name] = np.mean(smape_2(naive2_forecast, target))
             grouped_smapes[group_name] = np.mean(smape_2(forecast=model_forecast, target=target))

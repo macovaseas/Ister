@@ -1,3 +1,6 @@
+import re
+import shutil
+
 from data_provider.data_factory import data_provider
 from exp.exp_basic import Exp_Basic
 from utils.tools import EarlyStopping, adjust_learning_rate, visual
@@ -60,11 +63,6 @@ class Exp_Imputation(Exp_Basic):
 
                 f_dim = -1 if self.args.features == 'MS' else 0
                 outputs = outputs[:, :, f_dim:]
-
-                # add support for MS
-                batch_x = batch_x[:, :, f_dim:]
-                mask = mask[:, :, f_dim:]
-
                 pred = outputs.detach().cpu()
                 true = batch_x.detach().cpu()
                 mask = mask.detach().cpu()
@@ -117,11 +115,8 @@ class Exp_Imputation(Exp_Basic):
                 f_dim = -1 if self.args.features == 'MS' else 0
                 outputs = outputs[:, :, f_dim:]
 
-                # add support for MS
-                batch_x = batch_x[:, :, f_dim:]
-                mask = mask[:, :, f_dim:]
-
                 loss = criterion(outputs[mask == 0], batch_x[mask == 0])
+
                 train_loss.append(loss.item())
 
                 if (i + 1) % 100 == 0:
@@ -159,6 +154,8 @@ class Exp_Imputation(Exp_Basic):
             print('loading model')
             self.model.load_state_dict(torch.load(os.path.join('./checkpoints/' + setting, 'checkpoint.pth')))
 
+        shutil.rmtree(os.path.join('./checkpoints/', setting))
+
         preds = []
         trues = []
         masks = []
@@ -185,11 +182,6 @@ class Exp_Imputation(Exp_Basic):
                 # eval
                 f_dim = -1 if self.args.features == 'MS' else 0
                 outputs = outputs[:, :, f_dim:]
-
-                # add support for MS 
-                batch_x = batch_x[:, :, f_dim:]
-                mask = mask[:, :, f_dim:]
-
                 outputs = outputs.detach().cpu().numpy()
                 pred = outputs
                 true = batch_x.detach().cpu().numpy()
@@ -201,7 +193,7 @@ class Exp_Imputation(Exp_Basic):
                     filled = true[0, :, -1].copy()
                     filled = filled * mask[0, :, -1].detach().cpu().numpy() + \
                              pred[0, :, -1] * (1 - mask[0, :, -1].detach().cpu().numpy())
-                    visual(true[0, :, -1], filled, os.path.join(folder_path, str(i) + '.pdf'))
+                    visual(self.args.task_name, None, None, true[0, :, -1], filled, os.path.join(folder_path, str(i) + '.pdf'))
 
         preds = np.concatenate(preds, 0)
         trues = np.concatenate(trues, 0)
@@ -209,20 +201,26 @@ class Exp_Imputation(Exp_Basic):
         print('test shape:', preds.shape, trues.shape)
 
         # result save
-        folder_path = './results/' + setting + '/'
+        folder_path = './results/' + '/' + self.args.task_name + '/' + self.args.model_id + '/'
         if not os.path.exists(folder_path):
             os.makedirs(folder_path)
 
         mae, mse, rmse, mape, mspe = metric(preds[masks == 0], trues[masks == 0])
         print('mse:{}, mae:{}'.format(mse, mae))
-        f = open("result_imputation.txt", 'a')
+        f = open(os.path.join(folder_path, "result_imputation.txt"), 'a+')
         f.write(setting + "  \n")
-        f.write('mse:{}, mae:{}'.format(mse, mae))
-        f.write('\n')
+        f.write('mse:{} \nmae:{} \n'.format(mse, mae))
+
+        f.seek(0)
+        lines = f.readlines()
+        mse_s = [float(re.search(r'mse:(\d+\.\d+)', line).group(1)) for line in lines if 'mse:' in line]
+        mae_s = [float(re.search(r'mae:(\d+\.\d+)', line).group(1)) for line in lines if 'mae:' in line]
+        average_mse = sum(mse_s) / len(mse_s)
+        average_mae = sum(mae_s) / len(mae_s)
+        # f.write(f'Average Mse: {average_mse}')
+        f.write('Average Mse:{} , Average Mae:{} \n'.format(average_mse, average_mae))
+
         f.write('\n')
         f.close()
 
-        np.save(folder_path + 'metrics.npy', np.array([mae, mse, rmse, mape, mspe]))
-        np.save(folder_path + 'pred.npy', preds)
-        np.save(folder_path + 'true.npy', trues)
-        return
+        return [average_mse, average_mae]

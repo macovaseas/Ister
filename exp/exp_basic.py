@@ -1,37 +1,18 @@
 import os
 import torch
-from models import Autoformer, Transformer, TimesNet, Nonstationary_Transformer, DLinear, FEDformer, \
-    Informer, LightTS, Reformer, ETSformer, Pyraformer, PatchTST, MICN, Crossformer, FiLM, iTransformer, \
-    Koopa, TiDE, FreTS, Ister
-
+from models.CD_Ister import CD_Ister
+from models.MP_Ister import MP_Ister
 
 class Exp_Basic(object):
     def __init__(self, args):
         self.args = args
         self.model_dict = {
-            'TimesNet': TimesNet,
-            'Autoformer': Autoformer,
-            'Transformer': Transformer,
-            'Nonstationary_Transformer': Nonstationary_Transformer,
-            'DLinear': DLinear,
-            'FEDformer': FEDformer,
-            'Informer': Informer,
-            'LightTS': LightTS,
-            'Reformer': Reformer,
-            'ETSformer': ETSformer,
-            'PatchTST': PatchTST,
-            'Pyraformer': Pyraformer,
-            'MICN': MICN,
-            'Crossformer': Crossformer,
-            'FiLM': FiLM,
-            'iTransformer': iTransformer,
-            'Koopa': Koopa,
-            'TiDE': TiDE,
-            'FreTS': FreTS,
-            'Ister': Ister
+            'CD_Ister' : CD_Ister,
+            'MP_Ister' : MP_Ister
         }
         self.device = self._acquire_device()
-        self.model = self._build_model().to(self.device)
+        self.model = self._build_model()
+        self.model = self.model.to(self.device)
 
     def _build_model(self):
         raise NotImplementedError

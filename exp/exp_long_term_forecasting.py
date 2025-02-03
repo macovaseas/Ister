@@ -1,3 +1,5 @@
+import re
+import shutil
 from data_provider.data_factory import data_provider
 from exp.exp_basic import Exp_Basic
 from utils.tools import EarlyStopping, adjust_learning_rate, visual
@@ -9,6 +11,8 @@ import os
 import time
 import warnings
 import numpy as np
+from utils.tools import moving_avg
+from thop import profile, clever_format
 
 warnings.filterwarnings('ignore')
 
@@ -17,12 +21,14 @@ class Exp_Long_Term_Forecast(Exp_Basic):
     def __init__(self, args):
         super(Exp_Long_Term_Forecast, self).__init__(args)
 
+        self.moving_avg = moving_avg(args.moving_avg, stride=1)
+
     def _build_model(self):
         model = self.model_dict[self.args.model].Model(self.args).float()
 
         if self.args.use_multi_gpu and self.args.use_gpu:
             model = nn.DataParallel(model, device_ids=self.args.device_ids)
-        return model
+        return model  # return model
 
     def _get_data(self, flag):
         data_set, data_loader = data_provider(self.args, flag)
@@ -115,6 +121,21 @@ class Exp_Long_Term_Forecast(Exp_Basic):
                 dec_inp = torch.zeros_like(batch_y[:, -self.args.pred_len:, :]).float()
                 dec_inp = torch.cat([batch_y[:, :self.args.label_len, :], dec_inp], dim=1).float().to(self.device)
 
+                #  paramters and FLOPs
+                if epoch == i == 0:
+                    print('########################  Paramters and FLOPs  ######################### ')
+                    total_params = sum(p.numel() for p in self.model.parameters())
+                    total_params += sum(p.numel() for p in self.model.buffers())
+                    print(f'{total_params:,} total parameters.')
+                    print(f'{total_params / (1024 * 1024):.2f}M total parameters.')
+                    total_trainable_params = sum(p.numel() for p in self.model.parameters() if p.requires_grad)
+                    print(f'{total_trainable_params:,} training parameters.')
+                    print(f'{total_trainable_params / (1024 * 1024):.2f}M training parameters.')
+                    flops, _ = profile(self.model, inputs=(batch_x, batch_x_mark, dec_inp, batch_y_mark))
+                    macs = clever_format(flops, "%.3f")
+                    print(f'{macs:}  FLOPs.')
+                    print('####################################################################### ')
+
                 # encoder - decoder
                 if self.args.use_amp:
                     with torch.cuda.amp.autocast():
@@ -135,12 +156,12 @@ class Exp_Long_Term_Forecast(Exp_Basic):
                         outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark)
 
                     f_dim = -1 if self.args.features == 'MS' else 0
-                    outputs = outputs[:, -self.args.pred_len:, f_dim:]
-                    batch_y = batch_y[:, -self.args.pred_len:, f_dim:].to(self.device)
+                    outputs = outputs[:, -self.args.label_len-self.args.pred_len:, f_dim:]
+                    batch_y = batch_y[:, -self.args.label_len-self.args.pred_len:, f_dim:].to(self.device)
                     loss = criterion(outputs, batch_y)
                     train_loss.append(loss.item())
 
-                if (i + 1) % 100 == 0:
+                if (i + 1) % 1000 == 0:    # 100
                     print("\titers: {0}, epoch: {1} | loss: {2:.7f}".format(i + 1, epoch + 1, loss.item()))
                     speed = (time.time() - time_now) / iter_count
                     left_time = speed * ((self.args.train_epochs - epoch) * train_steps - i)
@@ -181,6 +202,8 @@ class Exp_Long_Term_Forecast(Exp_Basic):
             print('loading model')
             self.model.load_state_dict(torch.load(os.path.join('./checkpoints/' + setting, 'checkpoint.pth')))
 
+        shutil.rmtree(os.path.join('./checkpoints/', setting))
+
         preds = []
         trues = []
         folder_path = './test_results/' + setting + '/'
@@ -203,42 +226,45 @@ class Exp_Long_Term_Forecast(Exp_Basic):
                 if self.args.use_amp:
                     with torch.cuda.amp.autocast():
                         if self.args.output_attention:
-                            outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark)[0]
+                            outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark, is_test=True)[0]
                         else:
-                            outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark)
+                            outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark, is_test=True)
                 else:
                     if self.args.output_attention:
-                        outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark)[0]
+                        outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark, is_test=True)[0]
 
                     else:
-                        outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark)
+                        outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark, is_test=True)
 
                 f_dim = -1 if self.args.features == 'MS' else 0
-                outputs = outputs[:, -self.args.pred_len:, :]
-                batch_y = batch_y[:, -self.args.pred_len:, :].to(self.device)
+                outputs = outputs[:, -self.args.pred_len:, f_dim:]
+                batch_y = batch_y[:, -self.args.pred_len:, f_dim:].to(self.device)
                 outputs = outputs.detach().cpu().numpy()
                 batch_y = batch_y.detach().cpu().numpy()
+
                 if test_data.scale and self.args.inverse:
                     shape = outputs.shape
                     outputs = test_data.inverse_transform(outputs.squeeze(0)).reshape(shape)
                     batch_y = test_data.inverse_transform(batch_y.squeeze(0)).reshape(shape)
-        
-                outputs = outputs[:, :, f_dim:]
-                batch_y = batch_y[:, :, f_dim:]
 
                 pred = outputs
                 true = batch_y
 
                 preds.append(pred)
                 trues.append(true)
-                if i % 20 == 0:
+
+
+                if i % 1 == 0:
                     input = batch_x.detach().cpu().numpy()
                     if test_data.scale and self.args.inverse:
                         shape = input.shape
                         input = test_data.inverse_transform(input.squeeze(0)).reshape(shape)
+                    pd_start = input.shape[1] - 1
                     gt = np.concatenate((input[0, :, -1], true[0, :, -1]), axis=0)
-                    pd = np.concatenate((input[0, :, -1], pred[0, :, -1]), axis=0)
-                    visual(gt, pd, os.path.join(folder_path, str(i) + '.pdf'))
+                    pd = np.concatenate((input[0, -1:, -1], pred[0, :, -1]), axis=0)
+                    pd_end = gt.shape[0]
+                    visual(self.args.task_name, pd_start, pd_end, gt, pd, os.path.join(folder_path, str(i) + '.pdf'))
+                    print('PDF saved!!!!')
 
         preds = np.array(preds)
         trues = np.array(trues)
@@ -248,21 +274,26 @@ class Exp_Long_Term_Forecast(Exp_Basic):
         print('test shape:', preds.shape, trues.shape)
 
         # result save
-        folder_path = './results/' + setting + '/'
+        folder_path = './results/' + '/' + self.args.task_name + '/' + self.args.model_id + '/'
         if not os.path.exists(folder_path):
             os.makedirs(folder_path)
 
         mae, mse, rmse, mape, mspe = metric(preds, trues)
         print('mse:{}, mae:{}'.format(mse, mae))
-        f = open("result_long_term_forecast.txt", 'a')
+        f = open(os.path.join(folder_path,"result_long_term_forecast.txt"), 'a+')
         f.write(setting + "  \n")
-        f.write('mse:{}, mae:{}'.format(mse, mae))
-        f.write('\n')
+        f.write('mse:{} \nmae:{} \n'.format(mse, mae))
+
+        f.seek(0)
+        lines = f.readlines()
+        mse_s = [float(re.search(r'mse:(\d+\.\d+)', line).group(1)) for line in lines if 'mse:' in line]
+        mae_s = [float(re.search(r'mae:(\d+\.\d+)', line).group(1)) for line in lines if 'mae:' in line]
+        average_mse = sum(mse_s) / len(mse_s)
+        average_mae = sum(mae_s) / len(mae_s)
+        # f.write(f'Average Mse: {average_mse}')
+        f.write('Average Mse:{} , Average Mae:{} \n'.format(average_mse, average_mae))
+
         f.write('\n')
         f.close()
 
-        np.save(folder_path + 'metrics.npy', np.array([mae, mse, rmse, mape, mspe]))
-        np.save(folder_path + 'pred.npy', preds)
-        np.save(folder_path + 'true.npy', trues)
-
-        return
+        return [average_mse, average_mae]

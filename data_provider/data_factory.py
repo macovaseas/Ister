@@ -23,16 +23,16 @@ def data_provider(args, flag):
     Data = data_dict[args.data]
     timeenc = 0 if args.embed != 'timeF' else 1
 
-    if flag == 'test':
+    if (flag == 'test') or (flag == 'TEST'):  # if flag == 'test':
         shuffle_flag = False
-        drop_last = True # bsz=1, no need for drop_last
+        drop_last = True
         if args.task_name == 'anomaly_detection' or args.task_name == 'classification':
             batch_size = args.batch_size
         else:
             batch_size = 1  # bsz=1 for evaluation
         freq = args.freq
     else:
-        shuffle_flag = True
+        shuffle_flag = True  # True
         drop_last = True
         batch_size = args.batch_size  # bsz for train and valid
         freq = args.freq
@@ -82,7 +82,7 @@ def data_provider(args, flag):
             freq=freq,
             seasonal_patterns=args.seasonal_patterns
         )
-        print(flag, len(data_set))
+        print(flag, len(data_set))   # len(data_set)
         data_loader = DataLoader(
             data_set,
             batch_size=batch_size,

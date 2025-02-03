@@ -1,4 +1,4 @@
-# Ister: Inverted Seasonal-Trend Decomposition Transformer  
+# Code for paper: Ister: Inverted Seasonal-Trend Decomposition Transformer for Explainable Multivariate Time Series Forecasting
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)  
 [![Python](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/)  
@@ -17,8 +17,6 @@
 ✅ **Dot-attention Mechanism** - Reduces computational complexity from **O(L²) to O(L)** while enhancing interpretability.  
 ✅ **State-of-the-Art Performance** - Outperforms existing models with **up to 10% lower MSE** on real-world benchmarks.  
 ✅ **Intuitive Interpretability** - Provides visualization of component contributions, improving transparency in forecasting.  
-
-[Model](pics/idea.pdf)
 
 ---
 
@@ -58,16 +56,17 @@ pip install -r requirements.txt
 
 ---
 
-### 🔥 Quick Start
+## 🔥 Quick Start
 To run the experiment in paper:
 ```bash
-bash scripts/CD_Ister/ECL_script/Ister.sh
+bash scripts/CD_Ister/Traffic/Ister.sh
 bash scripts/MP_Ister/ECL_script/Ister.sh
+bash scripts/MP_Ister/Weather_script/Ister.sh
 ```
 
 ---
 
-### 📜 Citation
+## 📜 Citation
 If you find Ister useful, please consider citing our paper:
 ```bibtex
 @misc{cao2025isterinvertedseasonaltrenddecomposition,

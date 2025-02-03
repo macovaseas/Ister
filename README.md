@@ -1,46 +1,82 @@
-# ISTER: Inverted Seasonal-Trend Decomposition Transformer
+# Ister: Inverted Seasonal-Trend Decomposition Transformer  
 
-This repository contains the official implementation of the paper "ISTER: Inverted Seasonal-Trend Decomposition Transformer". ISTER is a novel model designed for long-term multivariate time series forecasting, addressing challenges like computational complexity, intricate temporal pattern capture, and cyclical information consideration.
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)  
+[![Python](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/)  
+[![Pytorch](https://img.shields.io/badge/pytorch-1.10%2B-red.svg)](https://pytorch.org/)  
 
+📢 **Ister** (Inverted Seasonal-Trend Decomposition Transformer) is a novel Transformer-based model designed for **explainable multivariate time series forecasting**. It efficiently decomposes time series into seasonal and trend components, models multi-periodicity, and captures inter-series dependencies using a **Dual Transformer** architecture. The proposed **Dot-attention mechanism** significantly improves interpretability, computational efficiency, and prediction accuracy.  
 
-## Introduction
+🔗 **Paper**: [arXiv:2412.18798v2](https://arxiv.org/abs/2412.18798)  
 
-Time series forecasting is crucial in various applications, including energy consumption, transportation, economic planning, weather prediction, and disease propagation. The Inverted Seasonal-Trend Decomposition Transformer (ISTER) is introduced to enhance long-term multivariate time series forecasting by decomposing time series into seasonal and trend components and employing a channel-independent network architecture.
+---
 
-![Alt text](pics/model.jpg)
+## 🚀 Features  
 
-## Features
+✅ **Hierarchical Time-Series Decomposition** - Effectively captures fine-grained periodic characteristics.  
+✅ **Dual Transformer Architecture** - Simultaneously models **multi-periodicity** and **inter-series dependencies**.  
+✅ **Dot-attention Mechanism** - Reduces computational complexity from **O(L²) to O(L)** while enhancing interpretability.  
+✅ **State-of-the-Art Performance** - Outperforms existing models with **up to 10% lower MSE** on real-world benchmarks.  
+✅ **Intuitive Interpretability** - Provides visualization of component contributions, improving transparency in forecasting.  
 
-- **Seasonal-Trend Decomposition:** Decomposes time series into seasonal and trend components for more accurate forecasting.
-- **Dot-attention mechanism:** Linear Time Complexity
-- **Channel-Independent Architecture:** Enhances performance in multivariate prediction tasks.
-- **State-of-the-Art Performance:** Achieves superior accuracy and efficiency in long-term forecasting tasks across multiple datasets.
+[Model](pics/idea.pdf)
 
-## Installation
+---
 
-To install the necessary dependencies, run:
+## 🔍 Updates: Ister 2.0  
+
+In the previous version of **Ister**, the model backbone primarily relied on **DualTransformer** to jointly model **inter-series dependencies** and **multi-periodicity**. While effective, this design led to **high training and inference costs**.  
+
+🔬 **What's new in Ister 2.0?**  
+- We found that **tailoring modeling approaches** based on dataset characteristics, combined with **hyperparameter tuning and architecture optimization**, can achieve **comparable accuracy** while **significantly reducing** model size, inference latency, and training costs.  
+- Leveraging the **linear complexity of Dot-attention**, **Ister 2.0** exhibits **better scalability**, making it more practical for large-scale time series forecasting.  
+- We encourage researchers to explore more **efficient ways** to jointly model **inter-series dependencies** and **multi-periodicity**.  
+
+📌 **Two Specialized Variants:**  
+
+| Model       | Suitable for |
+|------------|-------------|
+| **CD_Ister** | Designed for datasets with **strong channel dependencies** |
+| **MP_Ister** | Best suited for datasets where **channels are independent** but **multi-periodicity is prominent** |
+
+To facilitate further research, we provide **training scripts** for both models across **all datasets**. Check the `scripts/` directory for ready-to-use commands! 🚀  
+
+---
+
+## 📂 Installation  
+
+### Environment Setup  
+Ensure you have Python 3.8+ and PyTorch 1.10+ installed. You can create a virtual environment:  
 
 ```bash
+conda create -n ister_env python=3.8
+conda activate ister_env
+git clone https://github.com/your_username/ister.git
+cd ister
+pip install torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu118  # Adjust CUDA version
 pip install -r requirements.txt
 ```
 
-## Run
+---
 
-To run the experiment in paper, run:
-
+### 🔥 Quick Start
+To run the experiment in paper:
 ```bash
-bash scripts/long_term_forecast/ETT_script/Ister_ETTh1.sh
-bash scripts/long_term_forecast/ECL_script/Ister.sh
+bash scripts/CD_Ister/ECL_script/Ister.sh
+bash scripts/MP_Ister/ECL_script/Ister.sh
 ```
 
-## Citation
-Please cite our paper if you use this code in your work:
+---
 
-```bash
-@article{ISTER2024,
-  title={ISTER: Inverted Seasonal-Trend Decomposition Transformer},
-  author={Authors},
-  journal={},
-  year={2024}
+### 📜 Citation
+If you find Ister useful, please consider citing our paper:
+```bibtex
+@misc{cao2025isterinvertedseasonaltrenddecomposition,
+      title={Ister: Inverted Seasonal-Trend Decomposition Transformer for Explainable Multivariate Time Series Forecasting}, 
+      author={Fanpu Cao and Shu Yang and Zhengjian Chen and Ye Liu and Laizhong Cui},
+      year={2025},
+      eprint={2412.18798},
+      archivePrefix={arXiv},
+      primaryClass={cs.LG},
+      url={https://arxiv.org/abs/2412.18798}, 
 }
 ```

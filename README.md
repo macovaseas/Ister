@@ -69,7 +69,7 @@ bash scripts/MP_Ister/Weather_script/Ister.sh
 ## 📜 Citation
 If you find Ister useful, please consider citing our paper:
 ```bibtex
-@misc{cao2025isterinvertedseasonaltrenddecomposition,
+@misc{cao2025Ister,
       title={Ister: Inverted Seasonal-Trend Decomposition Transformer for Explainable Multivariate Time Series Forecasting}, 
       author={Fanpu Cao and Shu Yang and Zhengjian Chen and Ye Liu and Laizhong Cui},
       year={2025},

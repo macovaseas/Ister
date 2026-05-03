@@ -61,7 +61,6 @@ pip install -r requirements.txt
 To run the experiment in paper:
 ```bash
 bash scripts/CD_Ister/Traffic/Ister.sh
-bash scripts/MP_Ister/ECL_script/Ister.sh
 bash scripts/MP_Ister/Weather_script/Ister.sh
 ```
 
@@ -79,5 +78,6 @@ If you find Ister useful, please consider citing our paper:
   number={},
   pages={3571-3575},
   keywords={Feeds;Antennas;Filtering;Filters;LoRa;Protocols;HTTP;Data communication;Radio communication;Radio access networks;Multivariate time series forecasting;Channel alignment;Efficient attention mechanism},
-  doi={10.1109/ICASSP55912.2026.11463971}}
+  doi={10.1109/ICASSP55912.2026.11463971}
+}
 ```

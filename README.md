@@ -50,7 +50,6 @@ Ensure you have Python 3.8+ and PyTorch 1.10+ installed. You can create a virtua
 ```bash
 conda create -n ister_env python=3.8
 conda activate ister_env
-git clone https://github.com/your_username/ister.git
 cd ister
 pip install torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu118  # Adjust CUDA version
 pip install -r requirements.txt
@@ -71,13 +70,14 @@ bash scripts/MP_Ister/Weather_script/Ister.sh
 ## 📜 Citation
 If you find Ister useful, please consider citing our paper:
 ```bibtex
-@misc{cao2025Ister,
-      title={Ister: Inverted Seasonal-Trend Decomposition Transformer for Explainable Multivariate Time Series Forecasting}, 
-      author={Fanpu Cao and Shu Yang and Zhengjian Chen and Ye Liu and Laizhong Cui},
-      year={2025},
-      eprint={2412.18798},
-      archivePrefix={arXiv},
-      primaryClass={cs.LG},
-      url={https://arxiv.org/abs/2412.18798}, 
-}
+@INPROCEEDINGS{11463971,
+  author={Cao, Fanpu and Yang, Shu and Chen, Zhengjian and Liu, Ye and Cui, Laizhong},
+  booktitle={ICASSP 2026 - 2026 IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP)}, 
+  title={Ister: Linear Transformer for Efficient Multivariate Time Series Forecasting}, 
+  year={2026},
+  volume={},
+  number={},
+  pages={3571-3575},
+  keywords={Feeds;Antennas;Filtering;Filters;LoRa;Protocols;HTTP;Data communication;Radio communication;Radio access networks;Multivariate time series forecasting;Channel alignment;Efficient attention mechanism},
+  doi={10.1109/ICASSP55912.2026.11463971}}
 ```

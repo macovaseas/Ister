@@ -6,7 +6,7 @@
 
 📢 **Ister** (Inverted Seasonal-Trend Decomposition Transformer) is an efficient linear Transformer-based model designed for **multivariate time series forecasting**. It decomposes time series into seasonal and trend components and efficiently captures inter-series dependencies. The proposed **Dot-attention mechanism** significantly improves computational efficiency and prediction accuracy. 
 
-🔗 **Paper**: [arXiv:2412.18798v2](https://arxiv.org/abs/2412.18798)  
+🔗 **Paper**: [IEEE Xplore](https://ieeexplore.ieee.org/document/11463971)  
 
 ---
 

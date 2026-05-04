@@ -17,7 +17,7 @@
 
 ## 🚀 Features  
 
-✅ **Dot-attention Mechanism** - Reduces computational complexity from **O(L²) to O(L)** while enhancing interpretability.  
+✅ **Dot-attention Mechanism** - Reduces attention computational complexity from **O(L²) to O(L)**.  
 ✅ **State-of-the-Art Performance** - Outperforms existing models with **up to 10% lower MSE** on real-world benchmarks.  
 
 ---
@@ -50,8 +50,6 @@ Ensure you have Python 3.8+ and PyTorch 1.10+ installed. You can create a virtua
 ```bash
 conda create -n ister_env python=3.8
 conda activate ister_env
-cd ister
-pip install torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu118  # Adjust CUDA version
 pip install -r requirements.txt
 ```
 

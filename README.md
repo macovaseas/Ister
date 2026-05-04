@@ -11,7 +11,8 @@
 ---
 
 ## 📣 News
-* `2026/1/18` 💥💥 Ister is honored to be accepted by ICASSP 2026!
+* `2026/1/26` 💥💥  Our latest work, [**GTR**](https://github.com/macovaseas/GTR), has been accepted to **ICLR 2026**.
+* `2026/1/18` 💥💥 Ister is honored to be accepted by **ICASSP 2026**!
 
 ---
 
